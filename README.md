@@ -60,7 +60,13 @@ This repository contains the implementation of an AI-powered tool designed for t
     *   bashCopy codecd ../backendstreamlit run app.py
         
     *   bashCopy codecd ../frontendnpm start
-        
+
+
+Basic UI
+-----
+![image](https://github.com/user-attachments/assets/b7697b6d-0839-4574-b1cf-381e0239ec08)
+![image](https://github.com/user-attachments/assets/4cf2581c-8197-497a-8dab-932f9d50d233)
+
 
 Usage
 -----
@@ -103,4 +109,7 @@ Future Enhancements
 Contributors
 ------------
 
-\[Your Name(s)\]
+Mir Inayat Ahmed
+Mohammed Muqeet Us Salam
+Abdullah Shaikh
+Armaan Rashid Pathan
