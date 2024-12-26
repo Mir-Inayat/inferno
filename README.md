@@ -73,7 +73,7 @@ Usage
 
 
 File Structure
-bash `
+``` bash
 .
 ├── backend/              # Backend application
 │   ├── app.py           # Main application script
@@ -85,7 +85,8 @@ bash `
 │   ├── public/          # Public assets
 │   ├── package.json     # Frontend dependencies
 │   └── README.md        # Frontend documentation
-└── README.md             # Project documentation  `
+└── README.md             # Project documentation
+```
 
 Future Enhancements
 -------------------
