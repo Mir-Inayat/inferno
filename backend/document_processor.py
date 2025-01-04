@@ -63,13 +63,29 @@ class DocumentProcessor:
     def _extract_document_info(self, image):
         """Extract all relevant information using LayoutLM QA"""
         questions = {
+            # Person Identification
             "name": "What is the person's full name or applicant name?",
             "email": "What is the email address?",
-            "government_id": "What is the government ID, SSN, or identification number?",
-            "account_type": "What type of document is this? Is it a resume, application, or other document type?",
-            "employment": "What is the current job title or role?",
+            "government_id": "What is the government ID, SSN, passport number, or driver's license number?",
+            "dob": "What is the date of birth?",
+            "address": "What is the residential address?",
+            
+            # Account/Application Related
+            "account_type": "What type of account or service is being applied for? (e.g., savings, checking, credit card)",
+            "account_number": "Is there any account number or reference number?",
+            "application_date": "What is the application or document date?",
+            
+            # Financial Information
             "income": "What is the annual income or salary mentioned?",
-            "education": "What is the highest education level or degree?"
+            "employer": "What is the employer name?",
+            "employment_status": "What is the employment status?",
+            "tax_year": "What tax year is mentioned?",
+            "transaction_amount": "What is the transaction or payment amount?",
+            
+            # Document Specific
+            "document_type": "What type of document is this? (e.g., bank statement, tax return, pay stub, receipt)",
+            "issuing_authority": "What organization or authority issued this document?",
+            "expiration_date": "Is there an expiration date on the document?"
         }
         
         info = {}
@@ -147,25 +163,75 @@ class DocumentProcessor:
             raise Exception(f"Summary generation failed: {str(e)}")
 
     def _classify_document(self, extracted_info):
-        """Classify document based on extracted information"""
-        doc_type = str(extracted_info.get("account_type", "")).lower()
-        employment = str(extracted_info.get("employment", "")).lower()
+        """Enhanced document classification for financial documents"""
+        doc_type = str(extracted_info.get("document_type", "")).lower()
+        account_type = str(extracted_info.get("account_type", "")).lower()
         
-        if "resume" in doc_type or "cv" in doc_type:
-            return {
-                "primary_category": "Professional Document",
-                "sub_category": "Resume/CV",
-                "confidence_score": 0.9
+        # Primary Categories and their indicators
+        categories = {
+            "Account Application": {
+                "keywords": ["application", "apply", "new account", "credit card", "savings", "checking"],
+                "sub_categories": {
+                    "Credit Card Application": ["credit card", "credit application", "card application"],
+                    "Savings Account": ["savings", "save"],
+                    "Checking Account": ["checking", "check"]
+                }
+            },
+            "Identity Document": {
+                "keywords": ["passport", "driver", "license", "identification", "id card"],
+                "sub_categories": {
+                    "Passport": ["passport"],
+                    "Driver's License": ["driver", "license", "dmv"],
+                    "State ID": ["state id", "identification card"]
+                }
+            },
+            "Financial Statement": {
+                "keywords": ["statement", "income", "tax", "return", "paystub", "salary"],
+                "sub_categories": {
+                    "Tax Return": ["tax", "return", "1040", "w2"],
+                    "Pay Stub": ["pay", "stub", "salary", "wage"],
+                    "Bank Statement": ["bank statement", "account statement"],
+                    "Income Statement": ["income statement", "earnings"]
+                }
+            },
+            "Receipt": {
+                "keywords": ["receipt", "payment", "transaction", "purchase"],
+                "sub_categories": {
+                    "Payment Receipt": ["payment", "paid"],
+                    "Transaction Receipt": ["transaction"],
+                    "Purchase Receipt": ["purchase"]
+                }
             }
-        elif employment and "developer" in employment.lower():
-            return {
-                "primary_category": "Professional Document",
-                "sub_category": "Technical Resume",
-                "confidence_score": 0.85
-            }
-        else:
-            return {
-                "primary_category": "Professional Document",
-                "sub_category": "Unknown",
-                "confidence_score": 0.7
-            } 
+        }
+        
+        def calculate_confidence(text, keywords):
+            if not text:
+                return 0
+            matches = sum(1 for keyword in keywords if keyword in text)
+            return min(0.9, (matches * 0.3 + 0.6)) if matches > 0 else 0.5
+
+        # Find best matching category
+        best_category = None
+        best_sub_category = None
+        highest_confidence = 0
+
+        for category, data in categories.items():
+            confidence = calculate_confidence(doc_type + " " + account_type, data["keywords"])
+            
+            if confidence > highest_confidence:
+                highest_confidence = confidence
+                best_category = category
+                
+                # Find best sub-category
+                best_sub_conf = 0
+                for sub_cat, sub_keywords in data["sub_categories"].items():
+                    sub_conf = calculate_confidence(doc_type + " " + account_type, sub_keywords)
+                    if sub_conf > best_sub_conf:
+                        best_sub_conf = sub_conf
+                        best_sub_category = sub_cat
+
+        return {
+            "primary_category": best_category or "Unknown Document",
+            "sub_category": best_sub_category or "General",
+            "confidence_score": highest_confidence
+        } 
