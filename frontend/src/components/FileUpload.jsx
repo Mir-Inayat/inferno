@@ -109,6 +109,13 @@ const FileUpload = () => {
     }
   };
 
+  const allFilesUploaded = files.length > 0 && files.every(file => uploadStatus[file.name]?.status === 'success');
+
+  const handleSubmit = () => {
+    // Handle the submit action here
+    console.log('All files uploaded successfully. Submitting...');
+  };
+
   return (
     <div className="file-upload-container">
       <div
@@ -155,6 +162,12 @@ const FileUpload = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {allFilesUploaded && (
+        <button className="submit-button" onClick={handleSubmit}>
+          Submit
+        </button>
       )}
     </div>
   );

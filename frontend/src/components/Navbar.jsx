@@ -1,13 +1,10 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
-
-const Navbar = () => {
-    const location = useLocation();
-
+import { Link } from "react-router-dom";
+function Navbar() {
     return (
         <nav className="navbar">
             <div className="navbar-brand">
-                <h2>AppianAI</h2>
+                <h2>SmartDocMate</h2>
             </div>
             <ul className="navbar-links">
                 <li>
