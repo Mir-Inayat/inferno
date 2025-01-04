@@ -1,50 +1,38 @@
-import React, { useState } from 'react'
+import React from 'react';
+import FileUpload from '../components/FileUpload';
+import './Home.css';
 
 const Home = () => {
-  const [files, setFiles] = useState([]);
-
-  const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    setFiles(selectedFiles);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Handle multiple file submission logic here
-    console.log('Files to upload:', files);
-  }
-
   return (
-    <div className="upload-container">
-      <h1>Welcome</h1>
-      <p>Please upload your documents here</p>
+    <div className="container">
+      <div className="hero-section">
+        <h1>Document Categorization & Summarization</h1>
+        <p className="subtitle">
+          Upload your documents and let AI organize and summarize them for you
+        </p>
+      </div>
       
-      <form onSubmit={handleSubmit}>
-        <input 
-          type="file" 
-          accept=".pdf"
-          multiple
-          className="file-input"
-          onChange={handleFileChange}
-        />
-        <div className="selected-files">
-          {files.length > 0 && (
-            <p className="file-count">
-              {files.length} file{files.length !== 1 ? 's' : ''} selected
-            </p>
-          )}
-          {files.map((file, index) => (
-            <div key={index} className="file-name">
-              {file.name}
-            </div>
-          ))}
+      <FileUpload />
+      
+      <div className="features">
+        <div className="feature">
+          <i className="fas fa-file-alt"></i>
+          <h3>Multiple Formats</h3>
+          <p>Support for PDFs, images, and text files</p>
         </div>
-        <button type="submit" disabled={files.length === 0}>
-          Submit
-        </button>
-      </form>
+        <div className="feature">
+          <i className="fas fa-brain"></i>
+          <h3>AI-Powered</h3>
+          <p>Advanced categorization using LayoutLMv3</p>
+        </div>
+        <div className="feature">
+          <i className="fas fa-language"></i>
+          <h3>Multilingual</h3>
+          <p>Support for multiple languages</p>
+        </div>
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;

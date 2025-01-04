@@ -1,34 +1,17 @@
-import requests
-import os
-import json
+from document_processor import DocumentProcessor
 
-def test_upload():
-    url = 'http://localhost:5000/upload'
-    test_file = r"C:\Users\inayat\Downloads\Mir Inayat Ahmed-outlier_cv.pdf"  # Your file path
+def test_document_processing():
+    # Initialize the processor
+    processor = DocumentProcessor()
     
-    # Check if file exists
-    if not os.path.exists(test_file):
-        print(f"Error: File not found at {test_file}")
-        return
+    # Provide a valid file path to a PDF or image
+    file_path = r"C:\Users\inayat\Downloads\WhatsApp Image 2025-01-01 at 5.07.44 PM.jpeg"  # Replace with actual file path
+    
+    # Process the document
+    result = processor.process_document(file_path)
+    
+    # Print the result
+    print(result)
 
-    try:
-        with open(test_file, 'rb') as f:
-            files = {'file': ('test_document.pdf', f, 'application/pdf')}
-            print("Uploading file...")
-            response = requests.post(url, files=files)
-            
-        if response.status_code == 200:
-            result = response.json()
-            print("\nSuccess! Analysis Results:")
-            print("------------------------")
-            print(json.dumps(result, indent=2))
-        else:
-            print(f"Error {response.status_code}:", response.text)
-            
-    except requests.exceptions.ConnectionError:
-        print("Error: Could not connect to server. Make sure Flask is running on http://localhost:5000")
-    except Exception as e:
-        print(f"Error: {str(e)}")
-
-if __name__ == '__main__':
-    test_upload()
+if __name__ == "__main__":
+    test_document_processing()

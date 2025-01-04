@@ -108,9 +108,11 @@ class DocumentProcessor:
 
             # Extract text for summary
             text = pytesseract.image_to_string(image)
+            print(text)
             
             # Get document info using LayoutLM
             doc_info = self._extract_document_info(image)
+            print(doc_info)
             
             # Generate summary
             summary = self._generate_summary(text)
