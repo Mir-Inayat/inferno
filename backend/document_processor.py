@@ -1,115 +1,94 @@
-import requests
-import pytesseract
+import google.generativeai as genai
 from PIL import Image
 from pdf2image import convert_from_path
 import os
 import uuid
 from datetime import datetime
-import re
-from transformers import pipeline
-import time
+import base64
+from io import BytesIO
 
 class DocumentProcessor:
     def __init__(self):
-        # Use the provided API token
-        self.api_token = "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"
-        self.headers = {"Authorization": f"Bearer {self.api_token}"}
-        self.summarizer_api = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
-        self.qa_api = "https://api-inference.huggingface.co/models/impira/layoutlm-document-qa"
+        # Configure Gemini API
+        self.api_key = "YOUR_GEMINI_API_KEY"
+        genai.configure(api_key="AIzaSyBIKuGKwYEmo41cOTXPjKGIu3ue7ELwPus")
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
         self.poppler_path = r"C:\poppler\Library\bin"
 
-    def _extract_field_with_qa(self, image, question):
-        """Extract information using LayoutLM QA with retry logic"""
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                payload = {
-                    "inputs": {
-                        "image": self._encode_image(image),
-                        "question": question
-                    }
-                }
-                
-                response = requests.post(
-                    self.qa_api, 
-                    headers=self.headers, 
-                    json=payload,
-                    timeout=30
-                )
-                
-                if response.status_code == 503:
-                    # Model is loading, wait and retry
-                    time.sleep(5)
-                    continue
-                    
-                response.raise_for_status()
-                result = response.json()
-                return result[0].get('answer') if result else None
-
-            except Exception as e:
-                if attempt == max_retries - 1:
-                    print(f"QA extraction failed for {question}: {str(e)}")
-                    return None
-                time.sleep(2)
-
-    def _encode_image(self, image):
-        """Convert PIL Image to base64"""
-        import base64
-        from io import BytesIO
-        buffered = BytesIO()
-        image.save(buffered, format="PNG")
-        return base64.b64encode(buffered.getvalue()).decode()
-
     def _extract_document_info(self, image):
-        """Extract all relevant information using LayoutLM QA"""
-        questions = {
-            # Person Identification
-            "name": "What is the person's full name or applicant name?",
-            "email": "What is the email address?",
-            "government_id": "What is the government ID, SSN, passport number, or driver's license number?",
-            "dob": "What is the date of birth?",
-            "address": "What is the residential address?",
+        """Extract information using Gemini"""
+        try:
+            # Convert PIL Image to bytes for Gemini
+            buffered = BytesIO()
+            image.save(buffered, format="PNG")
+            image_bytes = buffered.getvalue()
             
-            # Account/Application Related
-            "account_type": "What type of account or service is being applied for? (e.g., savings, checking, credit card)",
-            "account_number": "Is there any account number or reference number?",
-            "application_date": "What is the application or document date?",
+            # Create Gemini-compatible image
+            uploaded_file = genai.upload_file(image_bytes)
             
-            # Financial Information
-            "income": "What is the annual income or salary mentioned?",
-            "employer": "What is the employer name?",
-            "employment_status": "What is the employment status?",
-            "tax_year": "What tax year is mentioned?",
-            "transaction_amount": "What is the transaction or payment amount?",
-            
-            # Document Specific
-            "document_type": "What type of document is this? (e.g., bank statement, tax return, pay stub, receipt)",
-            "issuing_authority": "What organization or authority issued this document?",
-            "expiration_date": "Is there an expiration date on the document?"
-        }
-        
-        info = {}
-        for field, question in questions.items():
-            info[field] = self._extract_field_with_qa(image, question)
+            prompt = """
+            Extract the following details from the uploaded document in JSON format:
 
-        # Improve document classification based on content
-        doc_type = self._classify_document(info)
-        
-        return {
-            "person": {
-                "name": info.get("name"),
-                "government_id": f"XXX-XX-{info['government_id'][-4:]}" if info.get("government_id") else None,
-                "email": info.get("email"),
-                "confidence_score": 0.95 if info.get("name") and info.get("email") else 0.5
-            },
-            "document_type": doc_type,
-            "extracted_fields": {
-                "document_type": info.get("account_type"),
-                "role": info.get("employment"),
-                "education": info.get("education"),
-                "annual_income": info.get("income")
+            Use this JSON schema:
+            DocumentData = {
+                "person": {
+                    "name": str,
+                    "email": str,
+                    "government_id": str,
+                    "dob": str,
+                    "address": str
+                },
+                "document_info": {
+                    "document_type": str,
+                    "account_type": str,
+                    "account_number": str,
+                    "application_date": str
+                },
+                "financial_info": {
+                    "income": str,
+                    "employer": str,
+                    "employment_status": str,
+                    "tax_year": str,
+                    "transaction_amount": str
+                },
+                "metadata": {
+                    "issuing_authority": str,
+                    "expiration_date": str
+                }
             }
-        }
+            Return: DocumentData
+
+            If any field is missing, return its value as null.
+            """.strip()
+
+            response = self.model.generate_content([prompt, uploaded_file])
+            extracted_data = response.text
+            
+            # Process the response to match the expected format
+            return {
+                "person": {
+                    "name": extracted_data.get("person", {}).get("name"),
+                    "government_id": self._mask_id(extracted_data.get("person", {}).get("government_id")),
+                    "email": extracted_data.get("person", {}).get("email"),
+                    "confidence_score": 0.95 if extracted_data.get("person", {}).get("name") else 0.5
+                },
+                "document_type": extracted_data.get("document_info", {}).get("document_type"),
+                "extracted_fields": {
+                    "document_type": extracted_data.get("document_info", {}).get("account_type"),
+                    "role": extracted_data.get("financial_info", {}).get("employment_status"),
+                    "annual_income": extracted_data.get("financial_info", {}).get("income")
+                }
+            }
+
+        except Exception as e:
+            print(f"Extraction error: {str(e)}")
+            return None
+
+    def _mask_id(self, id_number):
+        """Mask sensitive ID information"""
+        if not id_number:
+            return None
+        return f"XXX-XX-{id_number[-4:]}" if len(id_number) >= 4 else "XXX-XX-XXXX"
 
     def process_document(self, file_path):
         try:
@@ -122,16 +101,13 @@ class DocumentProcessor:
                 image = Image.open(file_path)
                 page_count = 1
 
-            # Extract text for summary
-            text = pytesseract.image_to_string(image)
-            print("text extracted")
-            
-            # Get document info using LayoutLM
+            # Extract document info using Gemini
             doc_info = self._extract_document_info(image)
-            print("doc_info extracted")
             
-            # Generate summary
-            summary = self._generate_summary(text)
+            # Generate a summary using Gemini
+            summary_prompt = "Provide a brief summary of this document in 2-3 sentences."
+            summary_response = self.model.generate_content([summary_prompt, image])
+            summary = summary_response.text
 
             return {
                 "status": "success",
@@ -151,87 +127,4 @@ class DocumentProcessor:
             return {
                 "status": "error",
                 "error": str(e)
-            }
-
-    def _generate_summary(self, text):
-        try:
-            payload = {"inputs": text[:1000], "parameters": {"max_length": 150, "min_length": 40}}
-            response = requests.post(self.summarizer_api, headers=self.headers, json=payload)
-            response.raise_for_status()  # Raise exception for bad status codes
-            return response.json()[0]['summary_text']
-        except Exception as e:
-            raise Exception(f"Summary generation failed: {str(e)}")
-
-    def _classify_document(self, extracted_info):
-        """Enhanced document classification for financial documents"""
-        doc_type = str(extracted_info.get("document_type", "")).lower()
-        account_type = str(extracted_info.get("account_type", "")).lower()
-        
-        # Primary Categories and their indicators
-        categories = {
-            "Account Application": {
-                "keywords": ["application", "apply", "new account", "credit card", "savings", "checking"],
-                "sub_categories": {
-                    "Credit Card Application": ["credit card", "credit application", "card application"],
-                    "Savings Account": ["savings", "save"],
-                    "Checking Account": ["checking", "check"]
-                }
-            },
-            "Identity Document": {
-                "keywords": ["passport", "driver", "license", "identification", "id card"],
-                "sub_categories": {
-                    "Passport": ["passport"],
-                    "Driver's License": ["driver", "license", "dmv"],
-                    "State ID": ["state id", "identification card"]
-                }
-            },
-            "Financial Statement": {
-                "keywords": ["statement", "income", "tax", "return", "paystub", "salary"],
-                "sub_categories": {
-                    "Tax Return": ["tax", "return", "1040", "w2"],
-                    "Pay Stub": ["pay", "stub", "salary", "wage"],
-                    "Bank Statement": ["bank statement", "account statement"],
-                    "Income Statement": ["income statement", "earnings"]
-                }
-            },
-            "Receipt": {
-                "keywords": ["receipt", "payment", "transaction", "purchase"],
-                "sub_categories": {
-                    "Payment Receipt": ["payment", "paid"],
-                    "Transaction Receipt": ["transaction"],
-                    "Purchase Receipt": ["purchase"]
-                }
-            }
-        }
-        
-        def calculate_confidence(text, keywords):
-            if not text:
-                return 0
-            matches = sum(1 for keyword in keywords if keyword in text)
-            return min(0.9, (matches * 0.3 + 0.6)) if matches > 0 else 0.5
-
-        # Find best matching category
-        best_category = None
-        best_sub_category = None
-        highest_confidence = 0
-
-        for category, data in categories.items():
-            confidence = calculate_confidence(doc_type + " " + account_type, data["keywords"])
-            
-            if confidence > highest_confidence:
-                highest_confidence = confidence
-                best_category = category
-                
-                # Find best sub-category
-                best_sub_conf = 0
-                for sub_cat, sub_keywords in data["sub_categories"].items():
-                    sub_conf = calculate_confidence(doc_type + " " + account_type, sub_keywords)
-                    if sub_conf > best_sub_conf:
-                        best_sub_conf = sub_conf
-                        best_sub_category = sub_cat
-
-        return {
-            "primary_category": best_category or "Unknown Document",
-            "sub_category": best_sub_category or "General",
-            "confidence_score": highest_confidence
-        } 
+            } 
