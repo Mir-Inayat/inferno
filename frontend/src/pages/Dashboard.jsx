@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DocumentCard from '../components/DocumentCard';
-
+import './Dashboard.css';
 const LANGUAGES = {
   'en': 'English',
   'ta': 'Tamil',
@@ -94,19 +94,24 @@ const Dashboard = () => {
   return (
     <div className="dashboard-container">
       <div className="dashboard-header">
-        <h1>Document Analysis Dashboard</h1>
-        <div className="controls">
-          <select 
-            value={selectedLanguage}
-            onChange={(e) => setSelectedLanguage(e.target.value)}
-            className="language-selector"
-          >
-            {Object.entries(LANGUAGES).map(([code, name]) => (
-              <option key={code} value={code}>{name}</option>
-            ))}
-          </select>
+        <div className="header-content">
+          <h1>Document Analysis Dashboard</h1>
+        
         </div>
+        
       </div>
+      <div className="language-section">
+            <span className="language-label">Choose Language:</span>
+            <select 
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="language-selector"
+            >
+              {Object.entries(LANGUAGES).map(([code, name]) => (
+                <option key={code} value={code}>{name}</option>
+              ))}
+            </select>
+          </div>
 
       <div className="filters-section">
         <select 
