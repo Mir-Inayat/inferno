@@ -1,6 +1,10 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import "./Navbar.css";
+
 function Navbar() {
+    const location = useLocation();
+
     return (
         <nav className="navbar">
             <div className="navbar-brand">
@@ -13,6 +17,11 @@ function Navbar() {
                     </Link>
                 </li>
                 <li>
+                    <Link to="/upload" className={location.pathname === "/upload" ? "active" : ""}>
+                        Upload
+                    </Link>
+                </li>
+                <li>
                     <Link to="/dashboard" className={location.pathname === "/dashboard" ? "active" : ""}>
                         Dashboard
                     </Link>
@@ -20,6 +29,6 @@ function Navbar() {
             </ul>
         </nav>
     );
-};
+}
 
 export default Navbar;
