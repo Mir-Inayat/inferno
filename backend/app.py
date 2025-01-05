@@ -6,6 +6,7 @@ from models import Base, Document, Person
 import os
 from werkzeug.utils import secure_filename
 from document_processor import DocumentProcessor
+from deep_translator import GoogleTranslator
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -136,6 +137,24 @@ def download_document(doc_id):
         return jsonify({"error": "Document not found"}), 404
     finally:
         session.close()
+
+@app.route('/api/translate', methods=['POST'])
+def translate_text():
+    try:
+        data = request.get_json()
+        if not data or 'text' not in data or 'target_language' not in data:
+            return jsonify({"error": "Missing text or target language"}), 400
+
+        translator = GoogleTranslator(source='auto', target=data['target_language'])
+        translated_text = translator.translate(data['text'])
+        
+        return jsonify({
+            "translatedText": translated_text,
+            "sourceLanguage": "auto"
+        })
+    except Exception as e:
+        print(f"Translation error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @app.errorhandler(413)
 def too_large(e):

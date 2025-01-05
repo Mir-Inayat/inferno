@@ -2,69 +2,111 @@
     padding: 2rem;
     max-width: 1200px;
     margin: 0 auto;
-  }
-  
-  .filters-section {
+}
+
+.filters-section {
     margin: 2rem 0;
     display: flex;
     gap: 1rem;
-  }
-  
-  .filters-section select {
+}
+
+.filters-section select {
     padding: 0.5rem;
     border-radius: 4px;
     border: 1px solid #ddd;
-  }
-  
-  .documents-grid {
+}
+
+.documents-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 2rem;
-  }
-  
-  .dashboard-card {
+}
+
+.dashboard-card {
     background: white;
     border-radius: 8px;
     padding: 1.5rem;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  }
-  
-  .card-header {
+}
+
+.card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
-  }
-  
-  .card-section {
+}
+
+.card-section {
     margin: 1rem 0;
     padding-top: 1rem;
     border-top: 1px solid #eee;
-  }
-  
-  .card-actions {
+}
+
+.card-actions {
     margin-top: 1rem;
     display: flex;
     justify-content: flex-end;
-  }
-  
-  .card-actions button {
+}
+
+.card-actions button {
     padding: 0.5rem 1rem;
     background: #007bff;
     color: white;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-  }
-  
-  .document-type {
+}
+
+.document-type {
     background: #e9ecef;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     font-size: 0.875rem;
-  }
-  
-  .loading, .error {
+}
+
+.loading, .error {
     text-align: center;
     padding: 2rem;
-  }
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.controls {
+    display: flex;
+    gap: 1rem;
+}
+
+.language-selector {
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: white;
+    min-width: 120px;
+}
+
+.translating {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.document-card {
+    position: relative;
+}
+
+.translation-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255,255,255,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}

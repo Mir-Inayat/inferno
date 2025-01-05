@@ -1,4 +1,16 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
+import DocumentCard from '../components/DocumentCard';
+
+const LANGUAGES = {
+  'en': 'English',
+  'ta': 'Tamil',
+  'te': 'Telugu',
+  'hi': 'Hindi',
+  'ur': 'Urdu',
+  'ar': 'Arabic',
+  'fr': 'French',
+  'es': 'Spanish'
+};
 
 const Dashboard = () => {
   const [documentData, setDocumentData] = useState([]);
@@ -8,12 +20,43 @@ const Dashboard = () => {
     person: 'all',
     documentType: 'all'
   });
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [translations, setTranslations] = useState({});
+  const [translating, setTranslating] = useState(false);
 
   const handleFilterChange = (filterName, value) => {
     setFilters(prev => ({
       ...prev,
       [filterName]: value
     }));
+  };
+
+  const translateText = async (text, language) => {
+    if (!text || language === 'en') return text;
+    
+    const cacheKey = `${text}-${language}`;
+    if (translations[cacheKey]) return translations[cacheKey];
+
+    try {
+      const response = await fetch('http://localhost:5000/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, target_language: language })
+      });
+      const data = await response.json();
+      
+      if (data.error) throw new Error(data.error);
+      
+      setTranslations(prev => ({
+        ...prev,
+        [cacheKey]: data.translatedText
+      }));
+      
+      return data.translatedText;
+    } catch (error) {
+      console.error('Translation error:', error);
+      return text;
+    }
   };
 
   useEffect(() => {
@@ -48,50 +91,23 @@ const Dashboard = () => {
            (filters.documentType === 'all' || doc.primary_category === filters.documentType);
   });
 
-  const renderDocumentCard = (doc) => {
-    if (!doc) return null;
-    
-    return (
-      <div key={doc.id} className="dashboard-card">
-        <div className="card-header">
-          <h2>{doc.file_name}</h2>
-          <span className="document-type">{doc.primary_category}</span>
-        </div>
-        
-        <div className="card-section">
-          <h3>Personal Information</h3>
-          <p><strong>Name:</strong> {doc.person?.name || 'N/A'}</p>
-          <p><strong>Email:</strong> {doc.person?.email || 'N/A'}</p>
-          <p><strong>ID:</strong> {doc.person?.government_id || 'N/A'}</p>
-        </div>
-
-        <div className="card-section">
-          <h3>Document Details</h3>
-          <p><strong>Category:</strong> {doc.primary_category}</p>
-          <p><strong>Sub-category:</strong> {doc.sub_category}</p>
-          <p><strong>Confidence:</strong> {(doc.confidence_score * 100).toFixed(1)}%</p>
-        </div>
-
-        {doc.summary && (
-          <div className="card-section">
-            <h3>Summary</h3>
-            <p>{doc.summary}</p>
-          </div>
-        )}
-
-        <div className="card-actions">
-          <button onClick={() => window.open(`http://localhost:5000/download/${doc.id}`)}>
-            View Document
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="dashboard-container">
-      <h1>Document Analysis Dashboard</h1>
-      
+      <div className="dashboard-header">
+        <h1>Document Analysis Dashboard</h1>
+        <div className="controls">
+          <select 
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+            className="language-selector"
+          >
+            {Object.entries(LANGUAGES).map(([code, name]) => (
+              <option key={code} value={code}>{name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div className="filters-section">
         <select 
           value={filters.person} 
@@ -118,7 +134,14 @@ const Dashboard = () => {
         <div className="error">Error: {error}</div>
       ) : (
         <div className="documents-grid">
-          {filteredDocuments?.map(doc => renderDocumentCard(doc))}
+          {filteredDocuments?.map(doc => (
+            <DocumentCard 
+              key={doc.id}
+              doc={doc}
+              selectedLanguage={selectedLanguage}
+              translateText={translateText}
+            />
+          ))}
         </div>
       )}
     </div>
