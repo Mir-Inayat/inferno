@@ -5,6 +5,7 @@ const FileUpload = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState([]);
   const [uploadStatus, setUploadStatus] = useState({});
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleDragOver = (e) => {
@@ -111,10 +112,33 @@ const FileUpload = () => {
 
   const allFilesUploaded = files.length > 0 && files.every(file => uploadStatus[file.name]?.status === 'success');
 
-  const handleSubmit = () => {
-    // Handle the submit action here
-    console.log('All files uploaded successfully. Submitting...');
-  };
+  const handleSubmit = async () => {
+    if (files.length === 0) return;
+    
+    setIsUploading(true);
+    const formData = new FormData();
+    files.forEach(file => {
+        formData.append('files[]', file);
+    });
+
+    try {
+        const response = await fetch('http://localhost:5000/upload', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        setFiles([]);
+        // Navigate to dashboard
+        window.location.href = '/dashboard';
+    } catch (error) {
+        toast.error(error.message || 'Upload failed');
+    } finally {
+        setIsUploading(false);
+    }
+};
 
   return (
     <div className="file-upload-container">
@@ -164,6 +188,20 @@ const FileUpload = () => {
         </div>
       )}
 
+      <div className="submit-section">
+        <button 
+          className="submit-button"
+          onClick={handleSubmit}
+          disabled={files.length === 0 || isUploading}
+        >
+          {isUploading ? (
+            <span>Uploading... <i className="fas fa-spinner fa-spin"></i></span>
+          ) : (
+            <span>Upload Files</span>
+          )}
+        </button>
+      </div>
+
       {allFilesUploaded && (
         <button className="submit-button" onClick={handleSubmit}>
           Submit
@@ -173,4 +211,4 @@ const FileUpload = () => {
   );
 };
 
-export default FileUpload; 
+export default FileUpload;

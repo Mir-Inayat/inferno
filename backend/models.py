@@ -34,7 +34,7 @@ class Document(Base):
     extracted_fields = Column(JSON)  # Stores all extracted key-value pairs
     
     # Metadata
-    metadata = Column(JSON)
+    doc_metadata = Column(JSON)  # Renamed from metadata to doc_metadata
     upload_date = Column(DateTime, default=datetime.utcnow)
     last_modified = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     processing_status = Column(String)  # pending, processing, completed, failed
@@ -72,4 +72,4 @@ class Category(Base):
     
     # Relationships
     documents = relationship("Document", secondary=document_categories, back_populates="categories")
-    subcategories = relationship("Category") 
+    subcategories = relationship("Category")

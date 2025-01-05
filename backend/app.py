@@ -1,5 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from models import Base, Document, Person
 import os
 from werkzeug.utils import secure_filename
 from document_processor import DocumentProcessor
@@ -19,52 +22,120 @@ processor = DocumentProcessor()
 # Make sure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# Database setup
+DATABASE_URL = "sqlite:///./documents.db"
+engine = create_engine(DATABASE_URL)
+Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@app.route('/api/documents', methods=['GET'])
+def get_documents():
+    session = Session()
+    try:
+        documents = session.query(Document).all()
+        return jsonify({
+            "status": "success",
+            "documents": [{
+                "id": doc.id,
+                "file_name": doc.file_name,
+                "file_path": doc.file_path,
+                "primary_category": doc.primary_category,
+                "sub_category": doc.sub_category,
+                "confidence_score": doc.confidence_score,
+                "summary": doc.summary,
+                "person": {
+                    "name": doc.person.name if doc.person else None,
+                    "email": doc.person.email if doc.person else None,
+                    "government_id": doc.person.government_id if doc.person else None
+                } if doc.person else None,
+                "upload_date": doc.upload_date.isoformat() if doc.upload_date else None
+            } for doc in documents]
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        session.close()
+
 @app.route('/upload', methods=['POST'])
 def upload_files():
-    # Check if any file was sent
     if 'files[]' not in request.files:
+        print("No files provided in request")
         return jsonify({"error": "No files provided"}), 400
 
     files = request.files.getlist('files[]')
+    session = Session()
     
-    if not files or files[0].filename == '':
-        return jsonify({"error": "No selected files"}), 400
+    try:
+        results = []
+        for file in files:
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                print(f"Processing file: {filename}")
+                file.save(file_path)
+                
+                # Process document
+                print("Starting document processing...")
+                doc_info = processor.process_document(file_path)
+                print(f"Document processing result: {doc_info}")
+                
+                if doc_info.get('status') == 'error':
+                    raise Exception(doc_info.get('error', 'Unknown processing error'))
+                
+                # Save to database
+                person_data = doc_info['classification']['person']
+                person = session.query(Person).filter_by(
+                    government_id=person_data['government_id']
+                ).first()
+                
+                if not person:
+                    print(f"Creating new person: {person_data['name']}")
+                    person = Person(
+                        name=person_data['name'],
+                        government_id=person_data['government_id'],
+                        email=person_data['email']
+                    )
+                    session.add(person)
+                
+                print("Creating document record...")
+                document = Document(
+                    file_path=file_path,
+                    file_name=filename,
+                    primary_category=doc_info['classification']['document_type']['primary_category'],
+                    sub_category=doc_info['classification']['document_type']['sub_category'],
+                    confidence_score=doc_info['classification']['document_type']['confidence_score'],
+                    extracted_fields=doc_info['classification']['extracted_fields'],
+                    person=person,
+                    processing_status='completed'
+                )
+                session.add(document)
+                results.append(doc_info)
+                print(f"Successfully processed file: {filename}")
+        
+        session.commit()
+        print("Database transaction committed")
+        return jsonify({"status": "success", "results": results})
+    
+    except Exception as e:
+        print(f"Error during processing: {str(e)}")
+        session.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        session.close()
 
-    results = []
-    for file in files:
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            
-            try:
-                # Process the document
-                result = processor.process_document(file_path)
-                results.append({
-                    "filename": filename,
-                    "status": "success",
-                    "analysis": result
-                })
-            except Exception as e:
-                results.append({
-                    "filename": filename,
-                    "status": "error",
-                    "error": str(e)
-                })
-        else:
-            results.append({
-                "filename": file.filename,
-                "status": "error",
-                "error": "Invalid file type"
-            })
-
-    return jsonify({
-        "message": "Files processed",
-        "results": results
-    }), 200
+@app.route('/download/<int:doc_id>')
+def download_document(doc_id):
+    session = Session()
+    try:
+        document = session.query(Document).get(doc_id)
+        if document and os.path.exists(document.file_path):
+            return send_file(document.file_path)
+        return jsonify({"error": "Document not found"}), 404
+    finally:
+        session.close()
 
 @app.errorhandler(413)
 def too_large(e):
