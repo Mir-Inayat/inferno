@@ -5,7 +5,8 @@
 
 }
 
-.navbar-brand h2 {
+.navbar-brand h1 {
+    font-family: Oswald;
     color: #ffffff;
     margin: 0;
     font-size: 1.5rem;

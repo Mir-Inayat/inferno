@@ -30,11 +30,12 @@ body {
   align-items: center;
   min-width: 320px;
   min-height: 100vh;
-  background: linear-gradient(135deg, #000000, #02666b);
+  background: linear-gradient(135deg, #750970, #2265e0);
   padding-top: 4rem;
 }
 
 h1 {
+  font-family: Oswald;
   font-size: 3.5em;
   line-height: 1.2;
 }
@@ -77,6 +78,7 @@ button:active {
 }
 
 .upload-container h1 {
+  font-family: Oswald;
   background: linear-gradient(135deg, #6366f1, #4f46e5);
   -webkit-background-clip: text;
   background-clip: text;

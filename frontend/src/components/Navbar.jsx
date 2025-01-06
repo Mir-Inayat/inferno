@@ -8,7 +8,7 @@ function Navbar() {
     return (
         <nav className="navbar">
             <div className="navbar-brand">
-                <h2>SmartDocMate</h2>
+                <h1>SmartDocMate</h1>
             </div>
             <ul className="navbar-links">
                 <li>
