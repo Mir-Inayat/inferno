@@ -1,0 +1,237 @@
+.dashboard-container {
+    padding: 6rem 2rem 2rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: #333;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+}
+
+.filters-section {
+    margin: 2rem 0;
+    display: flex;
+    gap: 1rem;
+    background-color: #222;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.filters-section select {
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background-color: #444;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.filters-section select:hover {
+    border-color: #6366f1;
+}
+
+.documents-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.dashboard-card {
+    background: #444;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #555;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+    border-color: #6366f1;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+.card-section {
+    margin: 1rem 0;
+    padding-top: 1rem;
+    border-top: 1px solid #555;
+    color: #cccccc;
+}
+
+.card-actions {
+    margin-top: 1rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.card-actions button {
+    padding: 0.5rem 1rem;
+    background: #6366f1;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.card-actions button:hover {
+    background: #818cf8;
+}
+
+.document-type {
+    background: #222;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    color: #6366f1;
+    border: 1px solid #555;
+}
+
+.loading, .error {
+    text-align: center;
+    padding: 2rem;
+    color: #ffffff;
+    background: #222;
+    border-radius: 8px;
+    margin: 2rem 0;
+}
+
+.error {
+    color: #ef4444;
+    border: 1px solid #ef4444;
+}
+
+.dashboard-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #222;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.dashboard-header h1 {
+    color: #ffffff;
+    margin: 0;
+}
+
+.language-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.language-label {
+    color: #cccccc;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.language-selector {
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background: #444;
+    color: #ffffff;
+    min-width: 120px;
+    cursor: pointer;
+}
+
+.language-selector:hover {
+    border-color: #6366f1;
+}
+
+.translating {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.document-card {
+    position: relative;
+}
+
+.translation-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(34, 34, 34, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    border-radius: 8px;
+    color: #ffffff;
+}
+
+/* Additional Styles */
+.document-info {
+    color: #cccccc;
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+}
+
+.document-title {
+    color: #6366f1;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-badge.success {
+    background: #059669;
+    color: white;
+}
+
+.status-badge.pending {
+    background: #d97706;
+    color: white;
+}
+
+.status-badge.error {
+    background: #dc2626;
+    color: white;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-card {
+    animation: fadeIn 0.3s ease-out;
+}
