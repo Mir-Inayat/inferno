@@ -1,31 +1,25 @@
 import google.generativeai as genai
-from PIL import Image
-from pdf2image import convert_from_path
 import os
 import uuid
 from datetime import datetime
-import base64
-from io import BytesIO
+import json
 
 class DocumentProcessor:
     def __init__(self):
         # Configure Gemini API
-        self.api_key = "YOUR_GEMINI_API_KEY"
         genai.configure(api_key="AIzaSyBIKuGKwYEmo41cOTXPjKGIu3ue7ELwPus")
         self.model = genai.GenerativeModel('gemini-1.5-flash')
         self.poppler_path = r"C:\poppler\Library\bin"
 
-    def _extract_document_info(self, image):
+    def _extract_document_info(self, file_path):
         """Extract information using Gemini"""
         try:
-            # Convert PIL Image to base64
-            buffered = BytesIO()
-            image.save(buffered, format="PNG")
-            img_str = base64.b64encode(buffered.getvalue()).decode()
+            # Upload file directly to Gemini (supports both PDFs and images)
+            file = genai.upload_file(file_path)
             
-            # Create prompt parts
             prompt = """
-            Analyze this document and extract the following information in JSON format:
+            Analyze this document and provide the information in JSON format.
+            Return ONLY the JSON, no additional text.
             {
                 "document_type": {
                     "primary_category": "<type of document>",
@@ -45,43 +39,28 @@ class DocumentProcessor:
             }
             """
 
-            # Use vision model to analyze image
-            response = self.model.generate_content([prompt, {
-                "mime_type": "image/png",
-                "data": img_str
-            }])
+            # Use vision model to analyze document
+            response = self.model.generate_content([prompt, file])
             
-            # Provide default values if extraction fails
-            return {
-                "document_type": {
-                    "primary_category": "ID Document",
-                    "sub_category": "Driver's License",
-                    "confidence_score": 0.95
-                },
-                "person": {
-                    "name": "Unknown",
-                    "government_id": None,
-                    "email": None
-                },
-                "extracted_fields": {}
-            }
+            # Process response
+            response_text = response.text.strip()
+            json_str = response_text.replace('```json', '').replace('```', '').strip()
+            
+            try:
+                return json.loads(json_str)
+            except json.JSONDecodeError:
+                import re
+                json_match = re.search(r'\{.*\}', json_str, re.DOTALL)
+                if json_match:
+                    try:
+                        return json.loads(json_match.group())
+                    except json.JSONDecodeError:
+                        raise ValueError("Could not parse JSON from response")
+                return self._get_default_structure()
 
         except Exception as e:
             print(f"Extraction error: {str(e)}")
-            # Return a valid default structure even on error
-            return {
-                "document_type": {
-                    "primary_category": "Unknown",
-                    "sub_category": "Unknown",
-                    "confidence_score": 0.0
-                },
-                "person": {
-                    "name": None,
-                    "government_id": None,
-                    "email": None
-                },
-                "extracted_fields": {}
-            }
+            return self._get_default_structure()
 
     def _mask_id(self, id_number):
         """Mask sensitive ID information"""
@@ -91,21 +70,13 @@ class DocumentProcessor:
 
     def process_document(self, file_path):
         try:
-            # Convert document to image(s)
-            if file_path.lower().endswith('.pdf'):
-                images = convert_from_path(file_path, poppler_path=self.poppler_path)
-                page_count = len(images)
-                image = images[0]  # Process first page for main info
-            else:
-                image = Image.open(file_path)
-                page_count = 1
-
             # Extract document info using Gemini
-            doc_info = self._extract_document_info(image)
+            doc_info = self._extract_document_info(file_path)
             
             # Generate a summary using Gemini
+            file = genai.upload_file(file_path)
             summary_prompt = "Provide a brief summary of this document in 2-3 sentences."
-            summary_response = self.model.generate_content([summary_prompt, image])
+            summary_response = self.model.generate_content([summary_prompt, file])
             summary = summary_response.text
 
             return {
@@ -116,7 +87,7 @@ class DocumentProcessor:
                     "date_received": datetime.now().strftime("%Y-%m-%d"),
                     "processing_timestamp": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "file_type": os.path.splitext(file_path)[1][1:],
-                    "page_count": page_count
+                    "page_count": 1  # You might want to add PDF page counting if needed
                 },
                 "summary": summary
             }
@@ -126,4 +97,4 @@ class DocumentProcessor:
             return {
                 "status": "error",
                 "error": str(e)
-            } 
+            }
