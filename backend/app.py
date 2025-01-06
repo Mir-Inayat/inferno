@@ -7,6 +7,7 @@ import os
 from werkzeug.utils import secure_filename
 from document_processor import DocumentProcessor
 from deep_translator import GoogleTranslator
+from celery import Celery
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
@@ -28,6 +29,59 @@ DATABASE_URL = "sqlite:///./documents.db"
 engine = create_engine(DATABASE_URL)
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
+
+# Celery setup
+def make_celery(app):
+    celery = Celery(
+        app.import_name,
+        backend='redis://localhost:6379/0',  # Results backend
+        broker='redis://localhost:6379/0'   # Message broker
+    )
+    celery.conf.update(app.config)
+    return celery
+
+app.config.update(
+    CELERY_BROKER_URL='redis://localhost:6379/0',
+    CELERY_RESULT_BACKEND='redis://localhost:6379/0'
+)
+
+celery = make_celery(app)
+
+#Celery task for processing documents asynchronously.
+
+@celery.task
+def process_document_async(file_path):
+    # Perform document processing asynchronously
+    # Example: Call your existing document processing logic
+    processor = DocumentProcessor()
+    result = processor.process_document(file_path)
+    return result
+
+
+#By this method we check the status of the tast using its task_id.
+@app.route('/tasks/<task_id>', methods=['GET'])
+def get_task_status(task_id):
+    task = process_document_async.AsyncResult(task_id)
+    
+    if task.state == 'PENDING':
+        response = {
+            "state": task.state,
+            "status": "Task is pending"
+        }
+    elif task.state != 'FAILURE':
+        response = {
+            "state": task.state,
+            "result": task.result
+        }
+    else:
+        response = {
+            "state": task.state,
+            "status": str(task.info)  # Contains error traceback
+        }
+    
+    return jsonify(response)
+
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -63,69 +117,31 @@ def get_documents():
 @app.route('/upload', methods=['POST'])
 def upload_files():
     if 'files[]' not in request.files:
-        print("No files provided in request")
         return jsonify({"error": "No files provided"}), 400
 
     files = request.files.getlist('files[]')
     session = Session()
     
     try:
-        results = []
+        task_ids = []
         for file in files:
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
                 file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                print(f"Processing file: {filename}")
                 file.save(file_path)
-                
-                # Process document
-                print("Starting document processing...")
-                doc_info = processor.process_document(file_path)
-                print(f"Document processing result: {doc_info}")
-                
-                if doc_info.get('status') == 'error':
-                    raise Exception(doc_info.get('error', 'Unknown processing error'))
-                
-                # Save to database
-                person_data = doc_info['classification']['person']
-                person = session.query(Person).filter_by(
-                    government_id=person_data['government_id']
-                ).first()
-                
-                if not person:
-                    print(f"Creating new person: {person_data['name']}")
-                    person = Person(
-                        name=person_data['name'],
-                        government_id=person_data['government_id'],
-                        email=person_data['email']
-                    )
-                    session.add(person)
-                
-                print("Creating document record...")
-                document = Document(
-                    file_path=file_path,
-                    file_name=filename,
-                    primary_category=doc_info['classification']['document_type']['primary_category'],
-                    sub_category=doc_info['classification']['document_type']['sub_category'],
-                    confidence_score=doc_info['classification']['document_type']['confidence_score'],
-                    extracted_fields=doc_info['classification']['extracted_fields'],
-                    person=person,
-                    processing_status='completed'
-                )
-                session.add(document)
-                results.append(doc_info)
-                print(f"Successfully processed file: {filename}")
-        
-        session.commit()
-        print("Database transaction committed")
-        return jsonify({"status": "success", "results": results})
+
+                # Enqueue the Celery task
+                task = process_document_async.delay(file_path)
+                task_ids.append(task.id)
+
+        return jsonify({"status": "success", "tasks": task_ids})
     
     except Exception as e:
-        print(f"Error during processing: {str(e)}")
         session.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
         session.close()
+
 
 @app.route('/download/<int:doc_id>')
 def download_document(doc_id):

@@ -5,7 +5,7 @@ def test_document_processing():
     processor = DocumentProcessor()
     
     # Provide a valid file path to a PDF or image
-    file_path = r"C:\Users\inayat\Downloads\WhatsApp Image 2025-01-01 at 5.07.44 PM.jpeg"  # Replace with actual file path
+    file_path = r"C:\Users\dihsa\OneDrive\Desktop\1% CLUB\saksham driving license.jpg"  # Replace with actual file path
     
     # Process the document
     result = processor.process_document(file_path)
