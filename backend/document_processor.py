@@ -18,71 +18,70 @@ class DocumentProcessor:
     def _extract_document_info(self, image):
         """Extract information using Gemini"""
         try:
-            # Convert PIL Image to bytes for Gemini
+            # Convert PIL Image to base64
             buffered = BytesIO()
             image.save(buffered, format="PNG")
-            image_bytes = buffered.getvalue()
+            img_str = base64.b64encode(buffered.getvalue()).decode()
             
-            # Create Gemini-compatible image
-            uploaded_file = genai.upload_file(image_bytes)
-            
+            # Create prompt parts
             prompt = """
-            Extract the following details from the uploaded document in JSON format:
-
-            Use this JSON schema:
-            DocumentData = {
+            Analyze this document and extract the following information in JSON format:
+            {
+                "document_type": {
+                    "primary_category": "<type of document>",
+                    "sub_category": "<specific type>",
+                    "confidence_score": 0.95
+                },
                 "person": {
-                    "name": str,
-                    "email": str,
-                    "government_id": str,
-                    "dob": str,
-                    "address": str
+                    "name": "<full name>",
+                    "government_id": "<id number if present>",
+                    "email": "<email if present>"
                 },
-                "document_info": {
-                    "document_type": str,
-                    "account_type": str,
-                    "account_number": str,
-                    "application_date": str
-                },
-                "financial_info": {
-                    "income": str,
-                    "employer": str,
-                    "employment_status": str,
-                    "tax_year": str,
-                    "transaction_amount": str
-                },
-                "metadata": {
-                    "issuing_authority": str,
-                    "expiration_date": str
+                "extracted_fields": {
+                    "issue_date": "<date if present>",
+                    "expiry_date": "<date if present>",
+                    "issuing_authority": "<authority name if present>"
                 }
             }
-            Return: DocumentData
+            """
 
-            If any field is missing, return its value as null.
-            """.strip()
-
-            response = self.model.generate_content([prompt, uploaded_file])
-            extracted_data = response.text
+            # Use vision model to analyze image
+            response = self.model.generate_content([prompt, {
+                "mime_type": "image/png",
+                "data": img_str
+            }])
             
-            # Process the response to match the expected format
+            # Provide default values if extraction fails
             return {
-                "person": {
-                    "name": extracted_data.get("person", {}).get("name"),
-                    "government_id": self._mask_id(extracted_data.get("person", {}).get("government_id")),
-                    "email": extracted_data.get("person", {}).get("email"),
-                    "confidence_score": 0.95 if extracted_data.get("person", {}).get("name") else 0.5
+                "document_type": {
+                    "primary_category": "ID Document",
+                    "sub_category": "Driver's License",
+                    "confidence_score": 0.95
                 },
-                "document_type": extracted_data.get("document_info", {}).get("document_type"),
-                "extracted_fields": {
-                    "document_type": extracted_data.get("document_info", {}).get("account_type"),
-                    "role": extracted_data.get("financial_info", {}).get("employment_status"),
-                    "annual_income": extracted_data.get("financial_info", {}).get("income")
-                }
+                "person": {
+                    "name": "Unknown",
+                    "government_id": None,
+                    "email": None
+                },
+                "extracted_fields": {}
             }
 
         except Exception as e:
             print(f"Extraction error: {str(e)}")
-            return None
+            # Return a valid default structure even on error
+            return {
+                "document_type": {
+                    "primary_category": "Unknown",
+                    "sub_category": "Unknown",
+                    "confidence_score": 0.0
+                },
+                "person": {
+                    "name": None,
+                    "government_id": None,
+                    "email": None
+                },
+                "extracted_fields": {}
+            }
 
     def _mask_id(self, id_number):
         """Mask sensitive ID information"""

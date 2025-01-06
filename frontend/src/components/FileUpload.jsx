@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import '../styles/FileUpload.css';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const FileUpload = () => {
   const [isDragging, setIsDragging] = useState(false);
@@ -32,10 +34,8 @@ const FileUpload = () => {
   };
 
   const handleFiles = async (newFiles) => {
-    // Update files state immediately for UI feedback
     setFiles((prevFiles) => [...prevFiles, ...newFiles]);
     
-    // Initialize upload status for new files
     newFiles.forEach(file => {
       setUploadStatus(prev => ({
         ...prev,
@@ -43,7 +43,6 @@ const FileUpload = () => {
       }));
     });
 
-    // Create FormData and append files
     const formData = new FormData();
     newFiles.forEach((file) => {
       formData.append('files[]', file);
@@ -56,24 +55,31 @@ const FileUpload = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        throw new Error(`Upload failed: ${response.statusText}`);
       }
 
       const data = await response.json();
       
-      // Update status for each file based on response
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       data.results.forEach(result => {
         setUploadStatus(prev => ({
           ...prev,
-          [result.filename]: {
-            status: result.status,
-            message: result.status === 'error' ? result.error : null,
-            analysis: result.analysis
+          [result.document_id]: {
+            status: result.status === 'success' ? 'success' : 'error',
+            message: result.error || null,
+            analysis: result.classification || {}
           }
         }));
       });
+
+      toast.success('Files uploaded successfully');
     } catch (error) {
-      // Update status for all files in this batch as failed
+      console.error('Upload error:', error);
+      toast.error(error.message || 'Upload failed');
+      
       newFiles.forEach(file => {
         setUploadStatus(prev => ({
           ...prev,
@@ -113,7 +119,10 @@ const FileUpload = () => {
   const allFilesUploaded = files.length > 0 && files.every(file => uploadStatus[file.name]?.status === 'success');
 
   const handleSubmit = async () => {
-    if (files.length === 0) return;
+    if (files.length === 0) {
+      toast.warning('Please select files to upload');
+      return;
+    }
     
     setIsUploading(true);
     const formData = new FormData();
@@ -126,19 +135,26 @@ const FileUpload = () => {
             method: 'POST',
             body: formData
         });
+        
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
+        
         const data = await response.json();
         if (data.error) {
             throw new Error(data.error);
         }
+        
         setFiles([]);
-        // Navigate to dashboard
+        toast.success('Files submitted successfully');
         window.location.href = '/dashboard';
     } catch (error) {
-        toast.error(error.message || 'Upload failed');
+        console.error('Submit error:', error);
+        toast.error(error.message || 'Submit failed');
     } finally {
         setIsUploading(false);
     }
-};
+  };
 
   return (
     <div className="file-upload-container">

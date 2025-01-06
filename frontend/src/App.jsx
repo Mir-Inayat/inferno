@@ -4,6 +4,8 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Navbar from "./components/Navbar";
 import Index from "./pages/index"
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
     return (
@@ -14,6 +16,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/upload" element={<Home/>} />
             </Routes>
+            <ToastContainer position="top-right" autoClose={5000} />
         </BrowserRouter>
     );
 }

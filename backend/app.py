@@ -9,7 +9,7 @@ from document_processor import DocumentProcessor
 from deep_translator import GoogleTranslator
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
 
 # Configuration
 UPLOAD_FOLDER = 'uploads'
@@ -161,4 +161,4 @@ def too_large(e):
     return jsonify({"error": "File is too large"}), 413
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8000)
+    app.run(debug=True, port=5000)
