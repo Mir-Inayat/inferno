@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, Column, Integer, String, JSON, DateTime, F
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
+import pytz
 
 Base = declarative_base()
 
@@ -43,6 +44,7 @@ class Document(Base):
     person_id = Column(Integer, ForeignKey('persons.id'))
     person = relationship("Person", back_populates="documents")
     categories = relationship("Category", secondary=document_categories, back_populates="documents")
+    feedback = relationship("Feedback", back_populates="document", cascade="all, delete-orphan")
 
 class Person(Base):
     __tablename__ = 'persons'
@@ -73,3 +75,15 @@ class Category(Base):
     # Relationships
     documents = relationship("Document", secondary=document_categories, back_populates="categories")
     subcategories = relationship("Category")
+
+class Feedback(Base):
+    __tablename__ = 'feedback'
+    
+    id = Column(Integer, primary_key=True)
+    document_id = Column(Integer, ForeignKey('documents.id'))
+    rating = Column(Integer, nullable=False)  # 1-5 star rating
+    comment = Column(String)
+    created_at = Column(DateTime, default=datetime.now(pytz.timezone('Asia/Kolkata')))
+    
+    # Relationship
+    document = relationship("Document", back_populates="feedback")
