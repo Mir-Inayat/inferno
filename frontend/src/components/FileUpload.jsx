@@ -55,7 +55,7 @@ const FileUpload = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
+        throw new Error(`Click upload again`);
       }
 
       const data = await response.json();
@@ -137,7 +137,7 @@ const FileUpload = () => {
         });
         
         if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`);
+          throw new Error(`Click Upload again`);
         }
         
         const data = await response.json();
