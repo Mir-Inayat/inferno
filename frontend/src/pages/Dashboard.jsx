@@ -74,7 +74,7 @@ const Dashboard = () => {
     };
 
     fetchDocuments();
-  }, []);
+  }, []); // Empty dependency array to run only once on mount
 
   const getUniquePersons = () => {
     const persons = new Set(documentData?.map(doc => doc.person?.name).filter(Boolean));

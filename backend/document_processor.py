@@ -14,7 +14,6 @@ class DocumentProcessor:
     def _extract_document_info(self, file_path):
         """Extract information using Gemini"""
         try:
-            # Upload file directly to Gemini (supports both PDFs and images)
             file = genai.upload_file(file_path)
             
             prompt = """
@@ -39,10 +38,7 @@ class DocumentProcessor:
             }
             """
 
-            # Use vision model to analyze document
             response = self.model.generate_content([prompt, file])
-            
-            # Process response
             response_text = response.text.strip()
             json_str = response_text.replace('```json', '').replace('```', '').strip()
             
@@ -52,15 +48,12 @@ class DocumentProcessor:
                 import re
                 json_match = re.search(r'\{.*\}', json_str, re.DOTALL)
                 if json_match:
-                    try:
-                        return json.loads(json_match.group())
-                    except json.JSONDecodeError:
-                        raise ValueError("Could not parse JSON from response")
-                return self._get_default_structure()
+                    return json.loads(json_match.group())
+                raise ValueError("Could not parse JSON from response")
 
         except Exception as e:
             print(f"Extraction error: {str(e)}")
-            return self._get_default_structure()
+            raise
 
     def _mask_id(self, id_number):
         """Mask sensitive ID information"""
