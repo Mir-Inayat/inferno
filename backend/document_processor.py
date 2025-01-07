@@ -7,7 +7,7 @@ import json
 class DocumentProcessor:
     def __init__(self):
         # Configure Gemini API
-        genai.configure(api_key="AIzaSyBIKuGKwYEmo41cOTXPjKGIu3ue7ELwPus")
+        genai.configure(api_key="AIzaSyAIi6EH9jGXiYgX6c0_leMpmRzcGAmz5Zo")
         self.model = genai.GenerativeModel('gemini-1.5-flash')
         self.poppler_path = r"C:\poppler\Library\bin"
 
