@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import FeedbackForm from './FeedbackForm';
 
 const DocumentCard = ({ doc, selectedLanguage, translateText }) => {
   const [translatedContent, setTranslatedContent] = useState(doc);
@@ -64,6 +65,10 @@ const DocumentCard = ({ doc, selectedLanguage, translateText }) => {
             <button onClick={() => window.open(`http://localhost:5000/download/${doc.id}`)}>
               View Document
             </button>
+          </div>
+
+          <div className="card-section">
+            <FeedbackForm documentId={doc.id} />
           </div>
         </>
       )}
